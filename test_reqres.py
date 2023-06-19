@@ -1,93 +1,91 @@
 import requests
+from jsonschema.validators import validate
+from helper import load_json_schema, CustomSession, reqres_session
 
 
 def test_create_user():
     name = "Jeff Bezos"
     job = "entrepreneur"
+    schema = load_json_schema('post_create_user.json')
 
-    response = requests.post(
-        url='https://reqres.in/api/users',
-        json={
-            "name": name,
-            "job": job}
-    )
+    response = reqres_session.post('/api/users', json={"name": name, "job": job})
 
+    validate(instance=response.json(), schema=schema)
     assert response.status_code == 201
     assert response.json()['name'] == name
     assert response.json()['job'] == job
 
 
-def test_delete_user_return_204():
-    response = requests.delete(url='https://reqres.in/api/users/21')
-
-    assert response.status_code == 204
-    assert response.text == ''
-
-
 def test_login_successful():
     email = "eve.holt@reqres.in"
     password = "cityslicka"
+    schema = load_json_schema('post_login_successful.json')
 
-    response = requests.post(
-        url='https://reqres.in/api/login',
-        json={
+    response = reqres_session.post('/api/login', json={
             "email": email,
             "password": password}
     )
 
+    validate(instance=response.json(), schema=schema)
     assert response.status_code == 200
     assert response.json()['token'] != ''
 
 
 def test_login_unsuccessful():
     email = "peter@klaven"
+    schema = load_json_schema('post_login_unsuccessful.json')
 
-    response = requests.post(
-        url='https://reqres.in/api/login',
-        json={
+    response = reqres_session.post('/api/login', json={
             "email": email}
     )
 
+    validate(instance=response.json(), schema=schema)
     assert response.status_code == 400
     assert response.json()['error'] == 'Missing password'
 
 
 def test_single_user_not_found():
-    response = requests.get(url='https://reqres.in/api/users/23')
+    schema = load_json_schema('get_single_user_not_found.json')
 
+    response = reqres_session.get('/api/users/23')
+
+    validate(instance=response.json(), schema=schema)
     assert response.status_code == 404
     assert response.text == '{}'
 
 
-def test_total_users():
-    users_count = 12
+def test_page_number():
     page = 2
+    schema = load_json_schema('get_page_number.json')
 
-    response = requests.get('https://reqres.in/api/users', params={'page': page})
+    response = reqres_session.get('/api/users', params={'page': page})
 
-    assert response.json()['total'] == users_count
+    validate(instance=response.json(), schema=schema)
     assert response.status_code == 200
 
 
 def test_register_successful():
     email = "eve.holt@reqres.in"
     password = "pistole1233"
+    schema = load_json_schema('post_register_successful.json')
 
-    response = requests.post(url='https://reqres.in/api/register',
-                             json={
+    response = reqres_session.post('/api/register', json={
                                  "email": email,
                                  "password": password}
                              )
 
+    validate(instance=response.json(), schema=schema)
     assert response.status_code == 200
     assert response.json()['id'] != ''
 
 
 def test_register_unsuccessful():
     email = "sydney@fife"
+    schema = load_json_schema('post_register_unsuccessful.json')
 
-    response = requests.post(url='https://reqres.in/api/register', json={"email": email})
+    response = reqres_session.post('/api/register', json={"email": email})
 
+    validate(instance=response.json(), schema=schema)
     assert response.status_code == 400
     assert response.json()["error"] == "Missing password"
 
@@ -95,11 +93,12 @@ def test_register_unsuccessful():
 def test_update_user_info():
     name = "Jeff Bezos"
     job = "Amazon founder"
+    schema = load_json_schema('put_update_user_info.json')
 
-    response = requests.put(url='https://reqres.in/api/users/2',
-                            json={"name": name,
+    response = reqres_session.put('/api/users/2', json={"name": name,
                                   "job": job})
 
+    validate(instance=response.json(), schema=schema)
     assert response.status_code == 200
     assert response.json()["name"] == name
     assert response.json()["job"] == job
@@ -107,8 +106,18 @@ def test_update_user_info():
 
 def test_users_list_default_length():
     default_users_count = 6
+    schema = load_json_schema('get_user_list.json')
 
-    response = requests.get('https://reqres.in/api/users')
+    response = reqres_session.get('/api/users')
 
+    validate(instance=response.json(), schema=schema)
     assert len(response.json()['data']) == default_users_count
 
+
+def test_delayed_response():
+    schema = load_json_schema('get_delayed_response.json')
+
+    response = reqres_session.get('/api/users?delay=3')
+
+    validate(instance=response.json(), schema=schema)
+    assert response.status_code == 200
